@@ -2,21 +2,15 @@
 
 HN optimal posting time & advertising value model. Implements the research spec in `hn_agent_prompt.md`.
 
-## Why the advertising lens?
+## Advertising value of Hacker News
 
-Front-page placement on Hacker News is **earned media** — it drives traffic and brand impressions comparable to paid ads, but without direct cost. For dev tools, startups, and B2B tech, HN reach is often more valuable than generic display ads: the audience is engineers, founders, and VCs who influence buying decisions. This project quantifies that value so you can:
+Hacker News front-page placement delivers large, measurable traffic. Case studies and self-reports put top positions in the tens of thousands of unique visitors per day; the audience skews toward developers, founders, and technical decision-makers. In advertising terms, that reach has high CPM-equivalent value because the audience is hard to reach through standard display inventory. This project estimates that value (advertising equivalent value, AEV) and models when submissions are most likely to reach the front page, so that expected value can be stated in dollar terms.
 
-- **Prioritize HN** in go-to-market (when is it worth the effort?)
-- **Compare** earned vs. paid channels (CPC/CPM equivalents)
-- **Optimize timing** to maximize both probability of making the front page and expected reach
+## Method
 
-## How it works
+**Phase 1 — Timing:** We use 12 months of story data from the Algolia HN API, replicate prior timing studies (Schaefer, chanind, Myriade), and fit an XGBoost model for P(front page) given hour-of-week, competition load, and post type. We treat two objectives separately: maximizing P(front page) (low competition) and maximizing reach (peak traffic). Results are reported for both.
 
-**Phase 1 — Timing:** We pull 12 months of story data from the Algolia HN API, replicate prior studies (Schaefer, chanind, Myriade), and train an XGBoost model to predict P(front page) from hour-of-week, competition load, and post type. The key methodological split: *maximize P(front page)* (post when competition is low) vs. *maximize reach* (post when traffic is high). We report both.
-
-**Phase 2 — AEV:** We estimate advertising equivalent value using traffic priors from published case studies (marcotm.com, HFT Guy, etc.), CPM benchmarks for developer/B2B audiences (LinkedIn tech, Carbon Ads, etc.), and corrections for ad-blocker undercount and aggregator long-tail. The model includes an influence multiplier: HN readers are early adopters who spread to peers, so one visitor can influence 3–20 downstream decisions.
-
-**Combined insight:** Expected AEV per submission = P(front page) × typical AEV when on front page. That tells you the dollar value of posting at time T vs. T+6.
+**Phase 2 — AEV:** We estimate advertising equivalent value from published traffic priors, CPM benchmarks for developer/B2B audiences, and corrections for ad-blocker undercount and aggregator long-tail. An influence multiplier accounts for downstream spread (readers sharing with peers). The main output is expected AEV per submission: P(front page) × typical AEV when on front page.
 
 ## Setup
 
