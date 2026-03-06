@@ -45,6 +45,8 @@ python run_all.py
 
 ### Timing Model (XGBoost)
 
+![P(front page) by hour-of-week](reports/timing_heatmap.png)
+
 **Feature importance:** `is_show_hn` (40%), `has_url` (25%), `hour_of_week` (8%), `competition_load` (8%), `hour_of_day` (7%), `title_word_count` (6%), `is_ask_hn` (6%).
 
 **Recommendations:**
