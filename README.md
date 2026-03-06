@@ -1,6 +1,6 @@
 # HackerAdvertising
 
-HN optimal posting time & advertising value model. Implements the research spec in `hn_agent_prompt.md`.
+HN optimal posting time & advertising value model.
 
 ## Advertising value of Hacker News
 
