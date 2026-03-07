@@ -33,11 +33,16 @@ python run_phase2.py
 
 # Full pipeline
 python run_all.py
+
+# Collect graduation data (run periodically; needs 50+ rows for Cox)
+python collect_graduations.py --duration 60 --interval 90
+python run_graduation_analysis.py
 ```
 
 ## Outputs
 
 - `data/algolia_stories.parquet` — historical story data
+- `data/firebase_graduations.parquet` — graduation data with velocity (from collect_graduations)
 - `reports/timing_heatmap.png` — P(front page) by hour-of-week
 - Console: prior studies table, feature importance, AEV sensitivity table
 
@@ -66,6 +71,16 @@ Post type dominates timing: Show HN and URL posts get a ranking boost; Ask HN ge
 **Recommendations:**
 - **Maximize P(front page):** Mon 19:00 UTC
 - **Maximize reach:** Post during peak traffic (US daytime UTC 14–22)
+
+### Cox Proportional Hazards (time-to-graduation)
+
+From Firebase graduation data with velocity (run `collect_graduations.py` then `run_graduation_analysis.py`). Higher velocity strongly predicts faster graduation; hour-of-week has weak effect.
+
+| Covariate | coef | exp(coef) | p |
+|-----------|------|-----------|---|
+| hour_of_week | 0.054 | 1.06 | 0.32 |
+| early_velocity_30 | 0.19 | 1.21 | 1.4e-05 |
+| velocity_votes_per_min | 19.5 | 3.1e8 | 5e-07 |
 
 ### Advertising Equivalent Value (AEV)
 

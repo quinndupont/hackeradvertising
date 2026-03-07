@@ -80,17 +80,51 @@ def predict_p_front_page_by_hour(model, X_template: pd.DataFrame, scaler: Standa
     return pd.DataFrame({"hour_of_week": hours, "p_front_page": proba})
 
 
+def prepare_graduation_features(
+    firebase_df: pd.DataFrame, algolia_df: pd.DataFrame | None = None
+) -> pd.DataFrame:
+    """
+    Merge Firebase graduation data with Algolia-derived features (has_url, is_show_hn, etc.).
+    Algolia uses objectID = HN item id.
+    """
+    df = firebase_df.copy()
+    df["id"] = df["id"].astype(int)
+    if algolia_df is not None and "objectID" in algolia_df.columns:
+        algolia_df = algolia_df.rename(columns={"objectID": "id"})
+        algolia_df["id"] = algolia_df["id"].astype(int)
+        feature_cols = ["id", "has_url", "is_show_hn", "is_ask_hn", "title_word_count"]
+        available = [c for c in feature_cols if c in algolia_df.columns and c != "id"]
+        if available:
+            merge_cols = ["id"] + available
+            algolia_sub = algolia_df[merge_cols].drop_duplicates(subset=["id"])
+            df = df.merge(algolia_sub, on="id", how="left")
+            for c in available:
+                df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0).astype(float)
+    return df
+
+
 def fit_cox_time_to_graduation(df: pd.DataFrame) -> "CoxPHFitter | None":
-    """Cox PH model for time-to-graduation (stories that never graduate = censored)."""
+    """
+    Cox PH model for time-to-graduation (stories that never graduate = censored).
+    Includes velocity covariates (early_velocity_30, velocity_votes_per_min) if present.
+    """
     if not HAS_LIFELINES:
         return None
-    # Requires graduation data with time-to-event and event indicator
     if "time_to_graduation" not in df.columns or "graduated" not in df.columns:
         return None
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        cph = CoxPHFitter()
-        df_cox = df[["time_to_graduation", "graduated", "hour_of_week", "day_of_week", "hour_of_day"]].copy()
+    covar_cols = [c for c in ["hour_of_week", "early_velocity_30", "velocity_votes_per_min"] if c in df.columns]
+    for attempt in [covar_cols, ["early_velocity_30", "velocity_votes_per_min"], ["hour_of_week"], []]:
+        cols = [c for c in attempt if c in df.columns]
+        df_cox = df[["time_to_graduation", "graduated", *cols]].copy().dropna()
+        if len(df_cox) < 10 or df_cox["graduated"].sum() < 3:
+            continue
         df_cox = df_cox.rename(columns={"time_to_graduation": "duration", "graduated": "event"})
-        cph.fit(df_cox, duration_col="duration", event_col="event")
-    return cph
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            cph = CoxPHFitter()
+            try:
+                cph.fit(df_cox, duration_col="duration", event_col="event")
+                return cph
+            except Exception:
+                continue
+    return None
